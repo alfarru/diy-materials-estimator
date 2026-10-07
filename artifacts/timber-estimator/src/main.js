@@ -4,44 +4,44 @@ const projects = {
     title: "Garden Log Store",
     description: "Plan an open-front timber frame for a sheltered stack of logs.",
     fields: [
-      { key: "length", label: "Length / span", unit: "m", min: 0.3, max: 10, value: 1.8, step: .01, hint: "Overall width along the front." },
-      { key: "depth", label: "Depth / width", unit: "m", min: 0.3, max: 5, value: .65, step: .01, hint: "Front to back." },
-      { key: "height", label: "Height", unit: "m", min: 0.3, max: 5, value: 1.5, step: .01, hint: "Overall frame height." }
+      { key: "length", label: "Length / span", unit: "m", min: 0.3, max: 10, value: 1.8, step: "any", hint: "Overall width along the front." },
+      { key: "depth", label: "Depth / width", unit: "m", min: 0.3, max: 5, value: .65, step: "any", hint: "Front to back." },
+      { key: "height", label: "Height", unit: "m", min: 0.3, max: 5, value: 1.5, step: "any", hint: "Overall frame height." }
     ]
   },
   flyscreen: {
     title: "Window Fly Screen",
     description: "Estimate a made-to-fit frame, mesh and fixing consumables.",
     fields: [
-      { key: "width", label: "Window opening width", unit: "mm", min: 100, max: 5000, value: 900, step: 1, hint: "Measure the opening where the screen will sit." },
-      { key: "height", label: "Window opening height", unit: "mm", min: 100, max: 5000, value: 1200, step: 1, hint: "Use the same units for width and height." }
+      { key: "width", label: "Window opening width", unit: "mm", min: 100, max: 5000, value: 900, step: "any", hint: "Measure the opening where the screen will sit." },
+      { key: "height", label: "Window opening height", unit: "mm", min: 100, max: 5000, value: 1200, step: "any", hint: "Use the same units for width and height." }
     ]
   },
   lock: {
     title: "Door Cylinder Lock Change",
     description: "Work out an indicative euro-cylinder size before buying.",
     fields: [
-      { key: "thickness", label: "Door thickness", unit: "mm", min: 20, max: 120, value: 44, step: 1, hint: "A useful check alongside the current cylinder." },
-      { key: "sideA", label: "Cylinder side A", unit: "mm", min: 10, max: 100, value: 35, step: 1, hint: "Retaining-screw centre to one end." },
-      { key: "sideB", label: "Cylinder side B", unit: "mm", min: 10, max: 100, value: 35, step: 1, hint: "Retaining-screw centre to the other end." }
+      { key: "thickness", label: "Door thickness", unit: "mm", min: 20, max: 120, value: 44, step: "any", hint: "A useful check alongside the current cylinder." },
+      { key: "sideA", label: "Cylinder side A", unit: "mm", min: 10, max: 100, value: 35, step: "any", hint: "Retaining-screw centre to one end." },
+      { key: "sideB", label: "Cylinder side B", unit: "mm", min: 10, max: 100, value: 35, step: "any", hint: "Retaining-screw centre to the other end." }
     ]
   },
   plywood: {
     title: "Plywood Surface Prep & Painting",
     description: "Budget primer, top coat and sanding supplies for a panel.",
     fields: [
-      { key: "length", label: "Panel length", unit: "m", min: .1, max: 10, value: 1.2, step: .01, hint: "Measure the panel face." },
-      { key: "width", label: "Panel width", unit: "m", min: .1, max: 10, value: .8, step: .01, hint: "Area is estimated from one face." },
-      { key: "coats", label: "Top-coat coats", unit: "coats", min: 1, max: 5, value: 2, step: 1, hint: "Primer is estimated separately as one coat." }
+      { key: "length", label: "Panel length", unit: "m", min: .1, max: 10, value: 1.2, step: "any", hint: "Measure the panel face." },
+      { key: "width", label: "Panel width", unit: "m", min: .1, max: 10, value: .8, step: "any", hint: "Area is estimated from one face." },
+      { key: "coats", label: "Top-coat coats", unit: "coats", min: 1, max: 5, value: 2, step: "any", hint: "Primer is estimated separately as one coat." }
     ]
   },
   custom: {
     title: "Custom Project",
     description: "Use a simple frame estimate for another timber project.",
     fields: [
-      { key: "length", label: "Length", unit: "m", min: .1, max: 10, value: 1.5, step: .01, hint: "Overall length of the project." },
-      { key: "width", label: "Width", unit: "m", min: .1, max: 10, value: .6, step: .01, hint: "Overall width or depth." },
-      { key: "height", label: "Height", unit: "m", min: .1, max: 5, value: .9, step: .01, hint: "Overall height." }
+      { key: "length", label: "Length", unit: "m", min: .1, max: 10, value: 1.5, step: "any", hint: "Overall length of the project." },
+      { key: "width", label: "Width", unit: "m", min: .1, max: 10, value: .6, step: "any", hint: "Overall width or depth." },
+      { key: "height", label: "Height", unit: "m", min: .1, max: 5, value: .9, step: "any", hint: "Overall height." }
     ]
   }
 };
@@ -142,7 +142,7 @@ function renderFields() {
 }
 
 function inputs() {
-  const values = Object.fromEntries(projects[projectSelect.value].fields.map(field => [field.key, Number(measurementInput(field.key).value)]));
+  const values = Object.fromEntries(projects[projectSelect.value].fields.map(field => [field.key, parseFloat(measurementInput(field.key).value)]));
   if (projectSelect.value === "custom") values.projectDescription = document.querySelector("#custom-project-description").value.trim();
   return values;
 }
@@ -350,7 +350,7 @@ function syncShoppingListButton() {
   if (!button || !status || !currentEstimateInputs) return;
   const measurementsChanged = projects[projectSelect.value].fields.some(field => {
     const input = measurementInput(field.key);
-    return !input || Number(input.value) !== currentEstimateInputs[field.key];
+    return !input || parseFloat(input.value) !== currentEstimateInputs[field.key];
   });
   const descriptionChanged = projectSelect.value === "custom"
     && document.querySelector("#custom-project-description")?.value.trim() !== currentEstimateInputs.projectDescription;
@@ -418,8 +418,9 @@ form.addEventListener("submit", event => {
   const definition = projects[projectSelect.value];
   for (const field of definition.fields) {
     const input = measurementInput(field.key);
-    const value = Number(input?.value);
-    if (!input || !input.value || !Number.isFinite(value) || value < field.min || (field.max && value > field.max)) {
+    const value = parseFloat(input?.value);
+    const inRange = value >= field.min && (field.max == null || value <= field.max);
+    if (!input || !input.value.trim() || !Number.isFinite(value) || !inRange) {
       errorBox.textContent = `${field.label} must be between ${field.min} and ${field.max} ${field.unit}.`;
       errorBox.hidden = false;
       if (typeof input?.focus === "function") input.focus();
