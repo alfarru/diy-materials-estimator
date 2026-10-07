@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "DIY Timber & Material Estimator"
+description = "A mobile-friendly DIY project estimator for calculating material quantities, finish volumes, indicative costs, and recommended tools for four common home and garden projects."
+version = "1.0.0"
+id = "artifacts/timber-estimator"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20205
+
+[services.development]
+run = "pnpm --filter @workspace/timber-estimator run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/timber-estimator", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/timber-estimator/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20205"
+BASE_PATH = "/"
