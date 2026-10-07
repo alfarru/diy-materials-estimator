@@ -1,53 +1,7 @@
+import { estimate, projects, sortProducts } from "./project-estimates.js";
+
 const root = document.querySelector("#root");
-const projects = {
-  logstore: {
-    title: "Garden Log Store",
-    description: "Plan an open-front timber frame for a sheltered stack of logs.",
-    fields: [
-      { key: "length", label: "Length / span", unit: "m", min: 0.3, max: 10, value: 1.8, step: "any", hint: "Overall width along the front." },
-      { key: "depth", label: "Depth / width", unit: "m", min: 0.3, max: 5, value: .65, step: "any", hint: "Front to back." },
-      { key: "height", label: "Height", unit: "m", min: 0.3, max: 5, value: 1.5, step: "any", hint: "Overall frame height." }
-    ]
-  },
-  flyscreen: {
-    title: "Window Fly Screen",
-    description: "Estimate a made-to-fit frame, mesh and fixing consumables.",
-    fields: [
-      { key: "width", label: "Window opening width", unit: "mm", min: 100, max: 5000, value: 900, step: "any", hint: "Measure the opening where the screen will sit." },
-      { key: "height", label: "Window opening height", unit: "mm", min: 100, max: 5000, value: 1200, step: "any", hint: "Use the same units for width and height." }
-    ]
-  },
-  lock: {
-    title: "Door Cylinder Lock Change",
-    description: "Work out an indicative euro-cylinder size before buying.",
-    fields: [
-      { key: "thickness", label: "Door thickness", unit: "mm", min: 20, max: 120, value: 44, step: "any", hint: "A useful check alongside the current cylinder." },
-      { key: "sideA", label: "Cylinder side A", unit: "mm", min: 10, max: 100, value: 35, step: "any", hint: "Retaining-screw centre to one end." },
-      { key: "sideB", label: "Cylinder side B", unit: "mm", min: 10, max: 100, value: 35, step: "any", hint: "Retaining-screw centre to the other end." }
-    ]
-  },
-  plywood: {
-    title: "Plywood Surface Prep & Painting",
-    description: "Budget primer, top coat and sanding supplies for a panel.",
-    fields: [
-      { key: "length", label: "Panel length", unit: "m", min: .1, max: 10, value: 1.2, step: "any", hint: "Measure the panel face." },
-      { key: "width", label: "Panel width", unit: "m", min: .1, max: 10, value: .8, step: "any", hint: "Area is estimated from one face." },
-      { key: "coats", label: "Top-coat coats", unit: "coats", min: 1, max: 5, value: 2, step: "any", hint: "Primer is estimated separately as one coat." }
-    ]
-  },
-  custom: {
-    title: "Custom Project",
-    description: "Use a simple frame estimate for another timber project.",
-    fields: [
-      { key: "length", label: "Length", unit: "m", min: .1, max: 10, value: 1.5, step: "any", hint: "Overall length of the project." },
-      { key: "width", label: "Width", unit: "m", min: .1, max: 10, value: .6, step: "any", hint: "Overall width or depth." },
-      { key: "height", label: "Height", unit: "m", min: .1, max: 5, value: .9, step: "any", hint: "Overall height." }
-    ]
-  }
-};
 const money = value => new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(value);
-const ceil = Math.ceil;
-const fmt = (n, digits = 1) => Number(n.toFixed(digits)).toLocaleString("en-GB");
 const escapeHTML = value => String(value).replace(/[&<>"']/g, character => ({
   "&": "&amp;",
   "<": "&lt;",
@@ -64,13 +18,34 @@ root.innerHTML = `
   <main class="page">
     <section class="intro" aria-labelledby="page-title">
       <div><p class="eyebrow">The practical project planner</p><h1 id="page-title">Know what to buy before you begin.</h1><p class="intro-copy">A clear, rough-cut list of materials and starter tools for the jobs that are easier when you measure twice.</p></div>
-       <div class="intro-aside"><strong>Four guided projects + custom</strong>Set your measurements. Get a useful shopping plan.</div>
+        <div class="intro-aside"><strong>14 popular DIY builds</strong>Set your measurements. Get a useful shopping plan.</div>
     </section>
     <div class="layout">
       <form class="panel form-panel" id="estimator-form" novalidate>
         <div class="section-heading"><span class="step">01</span><div><h2>Set up your project</h2><p>Choose a job and enter your measurements.</p></div></div>
         <div class="field"><label for="project">Project type</label><div class="select-wrap"><select id="project" name="project" data-testid="select-project">
-          <option value="logstore">Garden Log Store</option><option value="flyscreen">Window Fly Screen</option><option value="lock">Door Cylinder Lock Change</option><option value="plywood">Plywood Surface Prep &amp; Painting</option><option value="custom">Custom Project / Other</option>
+          <optgroup label="Garden &amp; Outdoor Structures">
+            <option value="logstore">Garden Log Store</option>
+            <option value="raisedbed">Raised Veg Planter / Garden Bed</option>
+            <option value="bin">Wheelie Bin Enclosure</option>
+            <option value="decking">Timber Decking Module</option>
+            <option value="pergola">Pergola / Lean-To</option>
+            <option value="flyscreen">Window Fly Screen</option>
+          </optgroup>
+          <optgroup label="Indoor Storage &amp; Furniture">
+            <option value="shelving">Alcove / Wall Shelving Unit</option>
+            <option value="workbench">Timber Workbench / Garage Shelving</option>
+            <option value="radiator">Radiator Cover Frame</option>
+            <option value="lock">Door Cylinder Lock Change</option>
+          </optgroup>
+          <optgroup label="Trim &amp; Finishing">
+            <option value="plywood">Plywood Surface Prep &amp; Painting</option>
+            <option value="skirting">Skirting Board Fitting</option>
+            <option value="laminate">Laminate Flooring Installation</option>
+          </optgroup>
+          <optgroup label="Custom">
+            <option value="custom">Custom Timber Build (Other)</option>
+          </optgroup>
         </select></div></div>
         <div id="project-fields" class="measure-grid" aria-live="polite"></div>
         <hr class="divider">
@@ -146,126 +121,6 @@ function inputs() {
   if (projectSelect.value === "custom") values.projectDescription = document.querySelector("#custom-project-description").value.trim();
   return values;
 }
-function containerPlan(litres) {
-  const sizes = [5, 2.5, 1];
-  let remaining = Math.max(.5, litres);
-  let cans = [];
-  for (const size of sizes) {
-    const count = Math.floor((remaining + .00001) / size);
-    if (count) { cans.push(`${count} × ${size} L`); remaining -= count * size; }
-  }
-  if (remaining > .00001) cans.push(`1 × ${remaining <= 1 ? "1" : "2.5"} L`);
-  return cans.join(", ");
-}
-function estimate(key, x, budget) {
-  let materials = [], assumptions = [], products = [], materialCost = 0, title = projects[key].title;
-  if (key === "logstore") {
-    const { length: l, depth: d, height: h } = x;
-    const rafters = ceil(l / .6) + 1;
-    const backSlats = ceil(l / .12) + 1;
-    const floorSlats = ceil(l / .12) + 1;
-    const frameRaw = 4 * h + 2 * 2 * (l + d) + rafters * d;
-    const slatRaw = backSlats * h + floorSlats * d;
-    const frameStock = ceil(frameRaw * 1.12 / 3);
-    const slatStock = ceil(slatRaw * 1.12 / 3);
-    const treatmentArea = l * h + (2 * d * h) + (l * d);
-    const litres = treatmentArea * 2 / 10;
-    const cans = containerPlan(litres);
-    const screws = ceil((backSlats * 2 + floorSlats * 2 + rafters * 2) * 1.2);
-    materialCost = frameStock * 8.5 + slatStock * 5.25 + Math.max(8, ceil(screws / 100) * 6) + Math.max(12, ceil(litres) * 8);
-    materials = [
-      [`Frame timber`, `${frameStock} × 3 m lengths`, `Uprights, perimeter rails and ${rafters} roof rafters; includes 12% cutting waste.`],
-      [`Slats`, `${slatStock} × 3 m lengths`, `${backSlats} back slats at 120 mm spacing and ${floorSlats} floor slats; includes 12% waste.`],
-      [`Exterior screws`, `About ${screws} screws`, `Approximate count tied to slat and frame fixing points.`],
-      [`Wood treatment`, `${cans} (${fmt(litres, 2)} L required)`, `Two coats over an estimated ${fmt(treatmentArea, 1)} m² back, sides and roof.`]
-    ];
-    assumptions.push("Simple open-front frame; roof rafters spaced at no more than 600 mm. Stock lengths and timber sections should be chosen to suit your design.");
-    products = [
-      ["Screws", "Exterior wood screws · corrosion-resistant fixings", "FIX"],
-      ["Treatment", "Exterior wood treatment · suitable for outdoor timber", "CARE"],
-      ["Saw", "Compound mitre saw · repeatable cross-cuts", "CUT"],
-      ["Measure", "Tape measure and combination square · accurate set-out", "MEAS"],
-      ["Driver", "Drill/driver with wood bits and driver bits", "TOOL"]
-    ];
-  } else if (key === "flyscreen") {
-    const w = x.width / 1000, h = x.height / 1000, perimeter = 2 * (w + h), area = w * h;
-    const mesh = area * 1.1, fixes = ceil(perimeter / .3) + 4;
-    materialCost = Math.max(26, 19 + perimeter * 5 + mesh * 13 + fixes * .18);
-    materials = [
-      ["Screen frame", `${fmt(perimeter * 1.1, 2)} m perimeter allowance`, "Frame perimeter plus 10% for joints and trimming."],
-      ["Insect mesh", `${fmt(mesh, 2)} m²`, `Opening area ${fmt(area, 2)} m² plus 10% allowance.`],
-      ["Spline", `${fmt(perimeter * 1.1, 2)} m`, "Allow a little extra for trimming at the corners."],
-      ["Fixings & kit", `About ${fixes} fixing points`, "Fixings estimated at 300 mm spacing, plus corner allowance; includes basic screening consumables."]
-    ];
-    assumptions.push("Assumes a simple rectangular screen frame. Check opening clearance, frame profile and mesh type before buying a kit.");
-    products = [
-      ["Mesh", "Fine insect screen mesh · cut-to-size roll", "MESH"],
-      ["Spline", "Screen spline and roller tool · for a neat mesh fit", "FIT"],
-      ["Seal", "Removable window seal strip · close small edge gaps", "SEAL"],
-      ["Measure", "Tape measure and small square · check the opening", "MEAS"],
-      ["Driver", "Compact drill/driver and bit set · for frame fixings", "TOOL"]
-    ];
-  } else if (key === "lock") {
-    const length = ceil((x.sideA + x.sideB) / 5) * 5;
-    materialCost = 17 + 3.5;
-    materials = [
-      ["Replacement cylinder", `1 × approximately ${length} mm (${x.sideA} / ${x.sideB} mm measured)`, "Length rounded up to the nearest 5 mm."],
-      ["Fitting fixings", "1 retaining screw + 2 spare screws", "Small allowance for suitable replacement fixings."]
-    ];
-    assumptions.push(`Door thickness recorded as ${x.thickness} mm. Check the actual cylinder against the current hardware, cam position, door furniture and your security needs before purchase; do not rely on this estimate alone.`);
-    products = [
-      ["Cylinder", "Euro-profile replacement cylinder · verify size and security rating", "LOCK"],
-      ["Fixings", "Cylinder retaining screws · check length and thread", "FIX"],
-      ["Measure", "Steel rule or tape measure · confirm both sides from screw centre", "MEAS"],
-      ["Screwdriver", "Manual screwdriver set · remove and refit existing hardware", "TOOL"]
-    ];
-  } else if (key === "custom") {
-    const { length, width, height } = x;
-    const frameRaw = 4 * (length + width) + 4 * height;
-    const frameStock = ceil(frameRaw * 1.15 / 3);
-    const screwCount = Math.max(16, ceil(frameRaw / .3) * 2);
-    const screwPacks = ceil(screwCount / 100);
-    title = `${x.projectDescription} (Custom project)`;
-    materialCost = frameStock * 8.5 + screwPacks * 6;
-    materials = [
-      ["General timber frame", `${frameStock} × 3 m lengths`, `About ${fmt(frameRaw, 2)} m for four uprights and upper/lower perimeter rails, plus 15% cutting allowance.`],
-      ["Wood screws", `About ${screwCount} screws (${screwPacks} × 100-count pack${screwPacks === 1 ? "" : "s"})`, "Generic frame-fixing allowance; select a suitable size and finish for your project."]
-    ];
-    assumptions.push("Fallback model for a simple rectangular frame only. It does not include shelves, seat boards, panels, bracing, load requirements, surface treatment, or a project-specific cut list.");
-    products = [
-      ["Screws", "General-purpose wood screws · choose for the project and location", "FIX"],
-      ["Measure", "Tape measure and carpenter’s square · check the frame layout", "MEAS"],
-      ["Saw", "Compound mitre saw · make repeatable timber cuts", "CUT"],
-      ["Driver", "Drill/driver and wood/driver bit set · assemble the frame", "TOOL"]
-    ];
-  } else {
-    const area = x.length * x.width;
-    const primerLitres = area / 10, topLitres = area * x.coats / 12;
-    const primerPack = Math.max(1, ceil(primerLitres));
-    const paintPack = Math.max(1, ceil(topLitres));
-    const sheets = Math.max(1, ceil(area * 5));
-    materialCost = primerPack * 14 + paintPack * 19 + Math.max(5, ceil(sheets / 5) * 5);
-    materials = [
-      ["Plywood primer", `${primerPack} L purchasable allowance (${fmt(primerLitres, 2)} L needed)`, `One coat at approximately 10 m²/L over ${fmt(area, 2)} m².`],
-      ["Top-coat paint", `${paintPack} L purchasable allowance (${fmt(topLitres, 2)} L needed)`, `${x.coats} coat${x.coats === 1 ? "" : "s"} at approximately 12 m²/L.`],
-      ["Sandpaper", `${ceil(sheets / 5) * 5} sheets`, `Rough allowance of 5 sheets per m²; practical pack rounded up.`]
-    ];
-    assumptions.push("One face of the panel is included. Coverage varies with plywood porosity, paint system and application; follow the product instructions and allow drying time.");
-    products = [
-      ["Primer", "Plywood / multi-surface primer · check compatibility", "PRIME"],
-      ["Paint", "Durable water-based top-coat paint · chosen finish", "PAINT"],
-      ["Sanding", "Mixed-grit sanding sheets · prep between coats", "SAND"],
-      ["Seal", "Paintable edge sealer · help reduce thirsty plywood edges", "SEAL"],
-      ["Sander", "Random-orbit sander and dust extraction bag", "TOOL"],
-      ["Measure", "Tape measure and straightedge · mark panel edges", "MEAS"]
-    ];
-  }
-  const ranges = budget === "pro" ? [85, 225] : [28, 76];
-  if (key === "lock") { ranges[0] = budget === "pro" ? 55 : 12; ranges[1] = budget === "pro" ? 155 : 42; }
-  if (key === "flyscreen") { ranges[0] = budget === "pro" ? 72 : 20; ranges[1] = budget === "pro" ? 190 : 58; }
-  return { title, materials, assumptions, products, materialCost, tools: ranges };
-}
-
 function productMarkup([name, detail, symbol], index, budget) {
   const toolOptions = {
     Saw: {
@@ -284,6 +139,10 @@ function productMarkup([name, detail, symbol], index, budget) {
       basic: ["Budget random-orbit sander", "Value sander for occasional panel preparation."],
       pro: ["DeWalt random-orbit sander", "Quality-brand sander for repeat projects."]
     },
+    FloorCutter: {
+      basic: ["Budget laminate flooring cutter", "Value hand cutter for straightforward flooring layouts."],
+      pro: ["DeWalt jigsaw and flooring blade", "Quality-brand jigsaw for detailed cuts and notches."]
+    },
     Screwdriver: {
       basic: ["Value manual screwdriver set", "Budget hand tools for removing and refitting hardware."],
       pro: ["Stanley screwdriver set", "Quality-brand hand tools for removing and refitting hardware."]
@@ -292,6 +151,42 @@ function productMarkup([name, detail, symbol], index, budget) {
   const [productName, productDetail] = toolOptions[name]?.[budget] ?? [name, detail];
   return `<article class="product-card" data-testid="card-product-${index}"><span class="product-symbol" aria-hidden="true">${symbol}</span><div class="product-copy"><strong>${productName}</strong><span>${productDetail}</span></div><a class="amazon-btn" href="https://www.amazon.co.uk/dp/ASIN_HERE?tag=YOUR_TAG-21" target="_blank" rel="nofollow noopener">View on Amazon →</a></article>`;
 }
+
+function renderAssemblySketch(sketch) {
+  if (!sketch) return "";
+  const dimension = value => `${Number(value).toLocaleString("en-GB", { maximumFractionDigits: 2 })} m`;
+  const topLabel = sketch.roofed ? "Rafters" : sketch.height < .1 ? "Frame rails" : "Top supports";
+  return `
+    <section class="assembly-panel" aria-labelledby="assembly-title">
+      <div class="subhead"><h3 id="assembly-title">2D assembly sketch</h3><small>Schematic · not to scale</small></div>
+      <div class="assembly-layout">
+        <svg class="assembly-sketch" viewBox="0 0 520 290" role="img" aria-labelledby="assembly-sketch-title assembly-sketch-desc">
+          <title id="assembly-sketch-title">Indicative timber frame assembly layout</title>
+          <desc id="assembly-sketch-desc">Line drawing showing the base, uprights, ${topLabel.toLowerCase()}, and entered overall dimensions.</desc>
+          <g class="sketch-frame" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path class="sketch-heavy" d="M94 204 322 204 420 153 192 153Z M94 94 322 94 420 43 192 43Z"/>
+            <path class="sketch-heavy" d="M94 204V94 M322 204V94 M420 153V43 M192 153V43"/>
+            <path class="sketch-rafter" d="M145 94 243 43 M205 94 303 43 M265 94 363 43"/>
+            <path class="sketch-dimension" d="M94 226H322 M332 225 430 174 M73 204V94"/>
+            <path class="sketch-tick" d="M94 220v12 M322 220v12 M327 220l10 10 M425 169l10 10 M67 204h12 M67 94h12"/>
+          </g>
+          <g class="sketch-labels">
+            <text x="205" y="190">Base</text>
+            <text x="102" y="146">Uprights</text>
+            <text x="268" y="57">${topLabel}</text>
+            <text x="157" y="250">Length · ${dimension(sketch.length)}</text>
+            <text x="354" y="216">Width · ${dimension(sketch.width)}</text>
+            <text x="18" y="151" transform="rotate(-90 18 151)">Height · ${dimension(sketch.height)}</text>
+          </g>
+        </svg>
+        <div class="assembly-guide">
+          <p class="assembly-guide-title">4 assembly steps</p>
+          <ol>${sketch.steps.map((step, index) => `<li><span class="assembly-step-number">${index + 1}</span><span>${escapeHTML(step)}</span></li>`).join("")}</ol>
+        </div>
+      </div>
+    </section>`;
+}
+
 function renderResults(result, budget) {
   const toolLow = result.tools[0], toolHigh = result.tools[1], totalLow = result.materialCost + toolLow, totalHigh = result.materialCost + toolHigh;
   resultsBox.innerHTML = `
@@ -299,10 +194,11 @@ function renderResults(result, budget) {
     <div class="total-box"><div><span>Estimated project range</span><strong>${money(totalLow)}–${money(totalHigh)}</strong></div><div class="range">${money(totalLow)}<br>to ${money(totalHigh)}</div></div>
     <div class="price-split"><div class="price-chip"><span>Materials subtotal</span><strong>${money(result.materialCost)}</strong></div><div class="price-chip"><span>Starter tools · estimated range</span><strong>${money(toolLow)}–${money(toolHigh)}</strong></div></div>
     <div class="subhead"><h3>Materials to plan for</h3><small>Rough quantity guide</small></div>
-    <ul class="estimate-list">${result.materials.map(([name, quantity, detail]) => `<li><span><strong>${name}</strong><br><span class="qty">${detail}</span></span><span class="qty">${quantity}</span></li>`).join("")}</ul>
+    <ul class="estimate-list">${result.materials.map(([name, quantity, detail, cost]) => `<li><span class="material-row-label"><strong>${escapeHTML(name)}</strong><br><span class="qty">${escapeHTML(detail)}</span></span><span class="material-row-meta"><span class="qty">${escapeHTML(quantity)}</span><strong class="material-cost">~${money(cost)}</strong></span></li>`).join("")}</ul>
+    ${renderAssemblySketch(result.sketch)}
     <div class="assumption"><strong>Model assumptions</strong><br>${result.assumptions.join(" ")}</div>
        <div class="copy-list-wrap"><button class="copy-list-btn" id="copy-shopping-list" type="button"><svg aria-hidden="true" viewBox="0 0 20 20" width="17" height="17" fill="none"><rect x="7" y="6" width="9" height="11" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M12.5 6V4.5A1.5 1.5 0 0 0 11 3H5.5A1.5 1.5 0 0 0 4 4.5v9A1.5 1.5 0 0 0 5.5 15H7" stroke="currentColor" stroke-width="1.6"/></svg>Copy Shopping List to Clipboard</button><p class="copy-list-status" id="copy-shopping-status" role="status" aria-live="polite"></p></div>
-      <section class="recommendations"><div class="subhead"><h3>Useful products for this job</h3><small>Optional picks</small></div><p class="rec-intro">Project-relevant supplies and tools to help complete the kit.</p><div class="product-list">${result.products.map((product, index) => productMarkup(product, index, budget)).join("")}</div><p class="placeholder-note">Affiliate product links currently use placeholder ASIN and tag values. Confirm product fit and current pricing before purchase.</p></section>
+      <section class="recommendations"><div class="subhead"><h3>Useful products for this job</h3><small>Optional picks</small></div><p class="rec-intro">Project-relevant supplies and tools to help complete the kit.</p><div class="product-list">${sortProducts(result.products).map((product, index) => productMarkup(product, index, budget)).join("")}</div><p class="placeholder-note">Affiliate product links currently use placeholder ASIN and tag values. Confirm product fit and current pricing before purchase.</p></section>
     <div class="assumption"><strong>Budget note</strong><br>Total includes estimated materials plus a ${budget === "pro" ? "Stanley / DeWalt" : "basic"} starter-tool allowance. Delivery, tax, existing tools and local retail prices can vary.</div>`;
   resultsBox.classList.add("show");
   document.querySelector("#welcome").style.display = "none";
@@ -319,8 +215,8 @@ function shoppingListText() {
   const toolHigh = currentResult.tools[1];
   const totalLow = currentResult.materialCost + toolLow;
   const totalHigh = currentResult.materialCost + toolHigh;
-  const materials = currentResult.materials.map(([name, quantity, detail]) =>
-    `- ${name}: ${quantity} (${detail})`
+  const materials = currentResult.materials.map(([name, quantity, detail, cost]) =>
+    `- ${name}: ${quantity} — ~${money(cost)} (${detail})`
   );
   const assumptions = currentResult.assumptions.map(note => `- ${note}`);
   return [

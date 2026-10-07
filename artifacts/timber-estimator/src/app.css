@@ -96,9 +96,25 @@ input:focus, select:focus { border-color: #4d806b; box-shadow: 0 0 0 3px rgba(40
 .subhead h3 { font: 700 13px Manrope,sans-serif; margin: 0; }
 .subhead small { color: var(--muted); font-size: 10px; }
 .estimate-list { list-style: none; padding: 0; margin: 0; }
-.estimate-list li { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid #eff2f4; font-size: 11px; line-height: 1.4; }
+.estimate-list li { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #eff2f4; font-size: 11px; line-height: 1.4; }
 .estimate-list li:last-child { border-bottom: 0; }
 .estimate-list .qty { color: #6b7888; text-align: right; }
+.material-row-label .qty { text-align: left; }
+.material-row-label { min-width: 0; }
+.material-row-meta { display: grid; justify-items: end; gap: 4px; min-width: 115px; }
+.material-cost { color: var(--green-dark); font: 700 11px Manrope,sans-serif; white-space: nowrap; }
+.assembly-panel { margin-top: 17px; padding-top: 16px; border-top: 1px solid #edf1f4; }
+.assembly-layout { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; align-items: center; }
+.assembly-sketch { display: block; width: 100%; height: auto; overflow: visible; border: 1px solid var(--line); border-radius: 11px; background: #f8fafc; padding: 7px; }
+.sketch-frame { stroke: #28604d; stroke-width: 3; }
+.sketch-rafter { stroke: #6c9a7e; stroke-width: 2.5; }
+.sketch-dimension { stroke: #9aa9b6; stroke-width: 1.2; stroke-dasharray: 3 3; }
+.sketch-tick { stroke: #9aa9b6; stroke-width: 1.2; }
+.sketch-labels { fill: #526275; font: 600 10px "DM Sans",sans-serif; }
+.assembly-guide-title { margin: 0 0 9px; color: #334155; font: 700 11px Manrope,sans-serif; }
+.assembly-guide ol { display: grid; gap: 8px; list-style: none; padding: 0; margin: 0; }
+.assembly-guide li { display: grid; grid-template-columns: 22px 1fr; align-items: start; gap: 7px; color: #64748b; font-size: 10px; line-height: 1.45; }
+.assembly-step-number { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: #eaf3ee; color: var(--green-dark); font-size: 10px; font-weight: 700; }
 .assumption { margin-top: 14px; padding: 12px; background: #f8fafb; border-radius: 10px; color: #687789; font-size: 10px; line-height: 1.55; }
 .assumption strong { color: #455365; }
 .recommendations { margin-top: 23px; }
@@ -130,6 +146,6 @@ input:focus, select:focus { border-color: #4d806b; box-shadow: 0 0 0 3px rgba(40
 .footer p { margin: 0; }
 .footer strong { color: #536171; font-weight: 600; }
 .disclosure { max-width: 680px; }
-@media(max-width: 900px) { .tips-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media(max-width: 900px) { .tips-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .assembly-layout { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); } }
 @media(max-width: 820px) { .layout { grid-template-columns: 1fr; } .results-column { grid-row: 1; } .welcome-panel { min-height: 220px; } .intro { grid-template-columns: 1fr; gap: 12px; } .intro-aside { text-align: left; } }
-@media(max-width: 540px) { .topbar { height: 60px; } .topbar-inner { padding: 0 17px; } .top-note { font-size: 0; } .top-note .live-dot { width: 8px; height: 8px; } .page { padding: 29px 15px 40px; } .intro { margin-bottom: 21px; } h1 { font-size: 34px; } .form-panel { padding: 20px 16px; } .results-panel { padding: 19px 15px; } .measure-grid { gap: 0 9px; } .product-card { grid-template-columns: 34px 1fr; } .product-card .amazon-btn { grid-column: 2; justify-self: start; } .footer { flex-direction: column; gap: 8px; } .tips-section { padding: 20px 16px; } .tips-grid { grid-template-columns: 1fr; } .tip-card { padding: 14px; } .copy-list-btn { width: 100%; } }
+@media(max-width: 540px) { .topbar { height: 60px; } .topbar-inner { padding: 0 17px; } .top-note { font-size: 0; } .top-note .live-dot { width: 8px; height: 8px; } .page { padding: 29px 15px 40px; } .intro { margin-bottom: 21px; } h1 { font-size: 34px; } .form-panel { padding: 20px 16px; } .results-panel { padding: 19px 15px; } .measure-grid { gap: 0 9px; } .product-card { grid-template-columns: 34px 1fr; } .product-card .amazon-btn { grid-column: 2; justify-self: start; } .footer { flex-direction: column; gap: 8px; } .tips-section { padding: 20px 16px; } .tips-grid { grid-template-columns: 1fr; } .tip-card { padding: 14px; } .copy-list-btn { width: 100%; } .assembly-layout { grid-template-columns: 1fr; } .assembly-sketch { max-width: 480px; margin: auto; } .material-row-meta { min-width: 96px; } }
