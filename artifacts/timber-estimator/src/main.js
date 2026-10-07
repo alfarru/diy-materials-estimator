@@ -34,11 +34,27 @@ const projects = {
       { key: "width", label: "Panel width", unit: "m", min: .1, max: 10, value: .8, step: .01, hint: "Area is estimated from one face." },
       { key: "coats", label: "Top-coat coats", unit: "coats", min: 1, max: 5, value: 2, step: 1, hint: "Primer is estimated separately as one coat." }
     ]
+  },
+  custom: {
+    title: "Custom Project",
+    description: "Use a simple frame estimate for another timber project.",
+    fields: [
+      { key: "length", label: "Length", unit: "m", min: .1, max: 10, value: 1.5, step: .01, hint: "Overall length of the project." },
+      { key: "width", label: "Width", unit: "m", min: .1, max: 10, value: .6, step: .01, hint: "Overall width or depth." },
+      { key: "height", label: "Height", unit: "m", min: .1, max: 5, value: .9, step: .01, hint: "Overall height." }
+    ]
   }
 };
 const money = value => new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 }).format(value);
 const ceil = Math.ceil;
 const fmt = (n, digits = 1) => Number(n.toFixed(digits)).toLocaleString("en-GB");
+const escapeHTML = value => String(value).replace(/[&<>"']/g, character => ({
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;"
+})[character]);
 
 root.innerHTML = `
   <header class="topbar"><div class="topbar-inner">
@@ -48,13 +64,13 @@ root.innerHTML = `
   <main class="page">
     <section class="intro" aria-labelledby="page-title">
       <div><p class="eyebrow">The practical project planner</p><h1 id="page-title">Know what to buy before you begin.</h1><p class="intro-copy">A clear, rough-cut list of materials and starter tools for the jobs that are easier when you measure twice.</p></div>
-      <div class="intro-aside"><strong>Four everyday projects</strong>Set your measurements. Get a useful shopping plan.</div>
+       <div class="intro-aside"><strong>Four guided projects + custom</strong>Set your measurements. Get a useful shopping plan.</div>
     </section>
     <div class="layout">
       <form class="panel form-panel" id="estimator-form" novalidate>
         <div class="section-heading"><span class="step">01</span><div><h2>Set up your project</h2><p>Choose a job and enter your measurements.</p></div></div>
         <div class="field"><label for="project">Project type</label><div class="select-wrap"><select id="project" name="project" data-testid="select-project">
-          <option value="logstore">Garden Log Store</option><option value="flyscreen">Window Fly Screen</option><option value="lock">Door Cylinder Lock Change</option><option value="plywood">Plywood Surface Prep &amp; Painting</option>
+          <option value="logstore">Garden Log Store</option><option value="flyscreen">Window Fly Screen</option><option value="lock">Door Cylinder Lock Change</option><option value="plywood">Plywood Surface Prep &amp; Painting</option><option value="custom">Custom Project / Other</option>
         </select></div></div>
         <div id="project-fields" class="measure-grid" aria-live="polite"></div>
         <hr class="divider">
@@ -102,12 +118,18 @@ let currentBudget = "basic";
 
 function renderFields() {
   const project = projects[projectSelect.value];
-  fieldsBox.innerHTML = project.fields.map(field => `
+  const customDescription = projectSelect.value === "custom" ? `
+    <div class="field custom-project-field">
+      <label for="custom-project-description">What are you building?</label>
+      <input id="custom-project-description" name="projectDescription" type="text" maxlength="80" placeholder="e.g. Wooden garden bench or shelving unit" autocomplete="off" required>
+      <small>This name will appear in your estimate and copied shopping list.</small>
+    </div>` : "";
+  fieldsBox.innerHTML = `${customDescription}${project.fields.map(field => `
     <div class="field">
       <label for="measure-${field.key}">${field.label}</label>
       <div class="unit-input"><input id="measure-${field.key}" name="${field.key}" type="number" min="${field.min}" ${field.max ? `max="${field.max}"` : ""} step="${field.step}" value="${field.value}" required inputmode="decimal" data-testid="input-${field.key}"><span>${field.unit}</span></div>
       <small>${field.hint}</small>
-    </div>`).join("");
+    </div>`).join("")}`;
   resultsBox.classList.remove("show");
   document.querySelector("#welcome").style.display = "";
   errorBox.hidden = true;
@@ -116,7 +138,9 @@ function renderFields() {
 }
 
 function inputs() {
-  return Object.fromEntries(projects[projectSelect.value].fields.map(field => [field.key, Number(form.elements[field.key].value)]));
+  const values = Object.fromEntries(projects[projectSelect.value].fields.map(field => [field.key, Number(form.elements[field.key].value)]));
+  if (projectSelect.value === "custom") values.projectDescription = form.elements.projectDescription.value.trim();
+  return values;
 }
 function containerPlan(litres) {
   const sizes = [5, 2.5, 1];
@@ -191,6 +215,25 @@ function estimate(key, x, budget) {
       ["Measure", "Steel rule or tape measure · confirm both sides from screw centre", "MEAS"],
       ["Screwdriver", "Manual screwdriver set · remove and refit existing hardware", "TOOL"]
     ];
+  } else if (key === "custom") {
+    const { length, width, height } = x;
+    const frameRaw = 4 * (length + width) + 4 * height;
+    const frameStock = ceil(frameRaw * 1.15 / 3);
+    const screwCount = Math.max(16, ceil(frameRaw / .3) * 2);
+    const screwPacks = ceil(screwCount / 100);
+    title = `${x.projectDescription} (Custom project)`;
+    materialCost = frameStock * 8.5 + screwPacks * 6;
+    materials = [
+      ["General timber frame", `${frameStock} × 3 m lengths`, `About ${fmt(frameRaw, 2)} m for four uprights and upper/lower perimeter rails, plus 15% cutting allowance.`],
+      ["Wood screws", `About ${screwCount} screws (${screwPacks} × 100-count pack${screwPacks === 1 ? "" : "s"})`, "Generic frame-fixing allowance; select a suitable size and finish for your project."]
+    ];
+    assumptions.push("Fallback model for a simple rectangular frame only. It does not include shelves, seat boards, panels, bracing, load requirements, surface treatment, or a project-specific cut list.");
+    products = [
+      ["Screws", "General-purpose wood screws · choose for the project and location", "FIX"],
+      ["Measure", "Tape measure and carpenter’s square · check the frame layout", "MEAS"],
+      ["Saw", "Compound mitre saw · make repeatable timber cuts", "CUT"],
+      ["Driver", "Drill/driver and wood/driver bit set · assemble the frame", "TOOL"]
+    ];
   } else {
     const area = x.length * x.width;
     const primerLitres = area / 10, topLitres = area * x.coats / 12;
@@ -248,7 +291,7 @@ function productMarkup([name, detail, symbol], index, budget) {
 function renderResults(result, budget) {
   const toolLow = result.tools[0], toolHigh = result.tools[1], totalLow = result.materialCost + toolLow, totalHigh = result.materialCost + toolHigh;
   resultsBox.innerHTML = `
-    <div class="result-top"><div><h2>${result.title}</h2><p>Indicative kit based on your measurements</p></div><span class="badge">${budget === "pro" ? "Stanley / DeWalt" : "Basic kit"}</span></div>
+    <div class="result-top"><div><h2>${escapeHTML(result.title)}</h2><p>Indicative kit based on your measurements</p></div><span class="badge">${budget === "pro" ? "Stanley / DeWalt" : "Basic kit"}</span></div>
     <div class="total-box"><div><span>Estimated project range</span><strong>${money(totalLow)}–${money(totalHigh)}</strong></div><div class="range">${money(totalLow)}<br>to ${money(totalHigh)}</div></div>
     <div class="price-split"><div class="price-chip"><span>Materials subtotal</span><strong>${money(result.materialCost)}</strong></div><div class="price-chip"><span>Starter tools · estimated range</span><strong>${money(toolLow)}–${money(toolHigh)}</strong></div></div>
     <div class="subhead"><h3>Materials to plan for</h3><small>Rough quantity guide</small></div>
@@ -304,8 +347,10 @@ function syncShoppingListButton() {
   const measurementsChanged = projects[projectSelect.value].fields.some(field =>
     Number(form.elements[field.key].value) !== currentEstimateInputs[field.key]
   );
+  const descriptionChanged = projectSelect.value === "custom"
+    && form.elements.projectDescription.value.trim() !== currentEstimateInputs.projectDescription;
   const budgetChanged = form.elements.budget.value !== currentBudget;
-  const isStale = measurementsChanged || budgetChanged;
+  const isStale = measurementsChanged || descriptionChanged || budgetChanged;
   button.disabled = isStale;
   button.classList.remove("copied");
   status.textContent = isStale
@@ -356,6 +401,15 @@ resultsBox.addEventListener("click", async event => {
 projectSelect.addEventListener("change", renderFields);
 form.addEventListener("submit", event => {
   event.preventDefault();
+  if (projectSelect.value === "custom") {
+    const descriptionInput = form.elements.projectDescription;
+    if (descriptionInput.value.trim().length < 2) {
+      errorBox.textContent = "Describe your custom project in at least 2 characters.";
+      errorBox.hidden = false;
+      descriptionInput.focus();
+      return;
+    }
+  }
   const definition = projects[projectSelect.value];
   for (const field of definition.fields) {
     const input = form.elements[field.key];
@@ -376,7 +430,7 @@ form.addEventListener("submit", event => {
   resultsBox.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 form.addEventListener("input", event => {
-  if (event.target.matches("input[type=number]")) errorBox.hidden = true;
+  if (event.target.matches('input[type="number"], #custom-project-description')) errorBox.hidden = true;
   syncShoppingListButton();
 });
 form.addEventListener("change", syncShoppingListButton);

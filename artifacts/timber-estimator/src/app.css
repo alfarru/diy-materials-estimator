@@ -51,6 +51,7 @@ input, select { width: 100%; height: 44px; border: 1px solid #d7e0e7; border-rad
 select { appearance: none; padding-right: 38px; }
 input:focus, select:focus { border-color: #4d806b; box-shadow: 0 0 0 3px rgba(40,96,77,.12); }
 .measure-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+.custom-project-field { grid-column: 1 / -1; }
 .unit-input { position: relative; }
 .unit-input input { padding-right: 48px; }
 .unit-input span { position: absolute; right: 12px; top: 13px; color: #8491a1; font-size: 12px; pointer-events: none; }
