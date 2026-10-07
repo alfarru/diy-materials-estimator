@@ -116,6 +116,10 @@ let currentResult = null;
 let currentEstimateInputs = null;
 let currentBudget = "basic";
 
+function measurementInput(key) {
+  return document.getElementById(`measure-${key}`);
+}
+
 function renderFields() {
   const project = projects[projectSelect.value];
   const customDescription = projectSelect.value === "custom" ? `
@@ -138,8 +142,8 @@ function renderFields() {
 }
 
 function inputs() {
-  const values = Object.fromEntries(projects[projectSelect.value].fields.map(field => [field.key, Number(form.elements[field.key].value)]));
-  if (projectSelect.value === "custom") values.projectDescription = form.elements.projectDescription.value.trim();
+  const values = Object.fromEntries(projects[projectSelect.value].fields.map(field => [field.key, Number(measurementInput(field.key).value)]));
+  if (projectSelect.value === "custom") values.projectDescription = document.querySelector("#custom-project-description").value.trim();
   return values;
 }
 function containerPlan(litres) {
@@ -344,11 +348,12 @@ function syncShoppingListButton() {
   const button = document.querySelector("#copy-shopping-list");
   const status = document.querySelector("#copy-shopping-status");
   if (!button || !status || !currentEstimateInputs) return;
-  const measurementsChanged = projects[projectSelect.value].fields.some(field =>
-    Number(form.elements[field.key].value) !== currentEstimateInputs[field.key]
-  );
+  const measurementsChanged = projects[projectSelect.value].fields.some(field => {
+    const input = measurementInput(field.key);
+    return !input || Number(input.value) !== currentEstimateInputs[field.key];
+  });
   const descriptionChanged = projectSelect.value === "custom"
-    && form.elements.projectDescription.value.trim() !== currentEstimateInputs.projectDescription;
+    && document.querySelector("#custom-project-description")?.value.trim() !== currentEstimateInputs.projectDescription;
   const budgetChanged = form.elements.budget.value !== currentBudget;
   const isStale = measurementsChanged || descriptionChanged || budgetChanged;
   button.disabled = isStale;
@@ -402,22 +407,22 @@ projectSelect.addEventListener("change", renderFields);
 form.addEventListener("submit", event => {
   event.preventDefault();
   if (projectSelect.value === "custom") {
-    const descriptionInput = form.elements.projectDescription;
-    if (descriptionInput.value.trim().length < 2) {
+    const descriptionInput = document.querySelector("#custom-project-description");
+    if (!descriptionInput || descriptionInput.value.trim().length < 2) {
       errorBox.textContent = "Describe your custom project in at least 2 characters.";
       errorBox.hidden = false;
-      descriptionInput.focus();
+      if (typeof descriptionInput?.focus === "function") descriptionInput.focus();
       return;
     }
   }
   const definition = projects[projectSelect.value];
   for (const field of definition.fields) {
-    const input = form.elements[field.key];
-    const value = Number(input.value);
-     if (!input.value || !Number.isFinite(value) || value < field.min || (field.max && value > field.max)) {
-       errorBox.textContent = `${field.label} must be between ${field.min} and ${field.max} ${field.unit}.`;
+    const input = measurementInput(field.key);
+    const value = Number(input?.value);
+    if (!input || !input.value || !Number.isFinite(value) || value < field.min || (field.max && value > field.max)) {
+      errorBox.textContent = `${field.label} must be between ${field.min} and ${field.max} ${field.unit}.`;
       errorBox.hidden = false;
-      input.focus();
+      if (typeof input?.focus === "function") input.focus();
       return;
     }
   }
