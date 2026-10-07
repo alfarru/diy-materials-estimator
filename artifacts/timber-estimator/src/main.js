@@ -78,6 +78,16 @@ root.innerHTML = `
         <div class="panel results-panel" id="results" aria-live="polite"></div>
       </section>
     </div>
+    <section class="tips-section panel" aria-labelledby="tips-title">
+      <div class="tips-heading"><p class="eyebrow">Measure well. Buy with confidence.</p><h2 id="tips-title">Project Tips &amp; FAQ</h2><p>A practical guide to measuring timber and choosing materials that suit the job.</p></div>
+      <div class="tips-grid">
+        <article class="tip-card"><h3>How do I measure before buying?</h3><p>Measure an opening at the top, middle, and bottom; use the smallest reading for a fitted screen. For a door cylinder, measure from the retaining-screw centre to each end. For timber, record whether dimensions are internal or external. Keep units consistent: one metre equals 1,000 millimetres.</p></article>
+        <article class="tip-card"><h3>How much extra timber should I order?</h3><p>Sketch each piece and make a cut list to see how stock lengths can be shared. Allow for saw kerfs, joints, end trimming, knots, and unusable offcuts. The model’s waste allowance is modest; complex designs or uneven ground may need more. Check actual planed sizes too: finished boards are often smaller than nominal dimensions.</p></article>
+        <article class="tip-card"><h3>Which fixings work outdoors?</h3><p>Choose exterior fixings compatible with the timber treatment. Hot-dip galvanised or quality-coated screws suit many garden builds; stainless steel can be preferable in coastal or persistently damp locations. Avoid ordinary indoor screws outdoors because moisture can cause corrosion and staining. Check manufacturer guidance for treated wood, and choose screw lengths to suit each joint.</p></article>
+        <article class="tip-card"><h3>How do I protect timber and plywood?</h3><p>Treat cut ends, drilled holes, and end grain with a compatible outdoor product, and keep timber clear of standing water. For plywood, remove sanding dust, seal exposed edges if needed, and use primer and paint labelled for plywood. Check labelled coverage and drying instructions.</p></article>
+        <article class="tip-card"><h3>Are these estimates a final cut list?</h3><p>No. These are planning estimates, not a structural design, lock-fit guarantee, live price check, or professional building advice. Verify dimensions and stock availability on site before buying. For work affecting structure, fire safety, or security, consult a qualified professional. Delivery, taxes, existing tools, material condition, and local prices can change the final budget.</p></article>
+      </div>
+    </section>
     <footer class="footer"><p><strong>Planning note</strong><br>Indicative DIY material estimates only — not structural or building advice. Delivery, tax, existing tools and local prices can vary.</p><p>As an Amazon Associate I earn from qualifying purchases.</p></footer>
   </main>`;
 
@@ -87,6 +97,8 @@ const fieldsBox = document.querySelector("#project-fields");
 const resultsBox = document.querySelector("#results");
 const errorBox = document.querySelector("#form-error");
 let currentResult = null;
+let currentEstimateInputs = null;
+let currentBudget = "basic";
 
 function renderFields() {
   const project = projects[projectSelect.value];
@@ -99,6 +111,8 @@ function renderFields() {
   resultsBox.classList.remove("show");
   document.querySelector("#welcome").style.display = "";
   errorBox.hidden = true;
+  currentResult = null;
+  currentEstimateInputs = null;
 }
 
 function inputs() {
@@ -240,11 +254,105 @@ function renderResults(result, budget) {
     <div class="subhead"><h3>Materials to plan for</h3><small>Rough quantity guide</small></div>
     <ul class="estimate-list">${result.materials.map(([name, quantity, detail]) => `<li><span><strong>${name}</strong><br><span class="qty">${detail}</span></span><span class="qty">${quantity}</span></li>`).join("")}</ul>
     <div class="assumption"><strong>Model assumptions</strong><br>${result.assumptions.join(" ")}</div>
+       <div class="copy-list-wrap"><button class="copy-list-btn" id="copy-shopping-list" type="button"><svg aria-hidden="true" viewBox="0 0 20 20" width="17" height="17" fill="none"><rect x="7" y="6" width="9" height="11" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M12.5 6V4.5A1.5 1.5 0 0 0 11 3H5.5A1.5 1.5 0 0 0 4 4.5v9A1.5 1.5 0 0 0 5.5 15H7" stroke="currentColor" stroke-width="1.6"/></svg>Copy Shopping List to Clipboard</button><p class="copy-list-status" id="copy-shopping-status" role="status" aria-live="polite"></p></div>
       <section class="recommendations"><div class="subhead"><h3>Useful products for this job</h3><small>Optional picks</small></div><p class="rec-intro">Project-relevant supplies and tools to help complete the kit.</p><div class="product-list">${result.products.map((product, index) => productMarkup(product, index, budget)).join("")}</div><p class="placeholder-note">Affiliate product links currently use placeholder ASIN and tag values. Confirm product fit and current pricing before purchase.</p></section>
     <div class="assumption"><strong>Budget note</strong><br>Total includes estimated materials plus a ${budget === "pro" ? "Stanley / DeWalt" : "basic"} starter-tool allowance. Delivery, tax, existing tools and local retail prices can vary.</div>`;
   resultsBox.classList.add("show");
   document.querySelector("#welcome").style.display = "none";
 }
+
+function shoppingListText() {
+  if (!currentResult || !currentEstimateInputs) return "";
+  const projectFields = projects[projectSelect.value].fields;
+  const measurements = projectFields.map(field => {
+    const value = currentEstimateInputs[field.key];
+    return `${field.label}: ${Number(value).toLocaleString("en-GB")} ${field.unit}`;
+  });
+  const toolLow = currentResult.tools[0];
+  const toolHigh = currentResult.tools[1];
+  const totalLow = currentResult.materialCost + toolLow;
+  const totalHigh = currentResult.materialCost + toolHigh;
+  const materials = currentResult.materials.map(([name, quantity, detail]) =>
+    `- ${name}: ${quantity} (${detail})`
+  );
+  const assumptions = currentResult.assumptions.map(note => `- ${note}`);
+  return [
+    "DIY TIMBER & MATERIAL ESTIMATOR — SHOPPING LIST",
+    `Project: ${currentResult.title}`,
+    `Tool budget: ${currentBudget === "pro" ? "Quality brands (Stanley / DeWalt)" : "Basic / budget tools"}`,
+    "",
+    "MEASUREMENTS",
+    ...measurements.map(measurement => `- ${measurement}`),
+    "",
+    "MATERIALS",
+    ...materials,
+    "",
+    `Estimated materials subtotal: ${money(currentResult.materialCost)}`,
+    `Estimated starter tools: ${money(toolLow)}–${money(toolHigh)}`,
+    `Estimated total project cost: ${money(totalLow)}–${money(totalHigh)}`,
+    "",
+    "NOTES",
+    ...assumptions,
+    "Planning estimate only; confirm sizes, product suitability, and local prices before buying."
+  ].join("\n");
+}
+
+function syncShoppingListButton() {
+  const button = document.querySelector("#copy-shopping-list");
+  const status = document.querySelector("#copy-shopping-status");
+  if (!button || !status || !currentEstimateInputs) return;
+  const measurementsChanged = projects[projectSelect.value].fields.some(field =>
+    Number(form.elements[field.key].value) !== currentEstimateInputs[field.key]
+  );
+  const budgetChanged = form.elements.budget.value !== currentBudget;
+  const isStale = measurementsChanged || budgetChanged;
+  button.disabled = isStale;
+  button.classList.remove("copied");
+  status.textContent = isStale
+    ? "Your measurements or tool budget changed. Recalculate to copy an updated list."
+    : "";
+}
+
+async function copyToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // Fall through to the selection-based copy for browsers that deny clipboard access.
+    }
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  let copied = false;
+  try {
+    textarea.select();
+    copied = document.execCommand("copy");
+  } finally {
+    textarea.remove();
+  }
+  if (!copied) throw new Error("Clipboard copy was unavailable.");
+}
+
+resultsBox.addEventListener("click", async event => {
+  const button = event.target.closest("#copy-shopping-list");
+  if (!button || button.disabled || !currentResult) return;
+  const status = document.querySelector("#copy-shopping-status");
+  try {
+    await copyToClipboard(shoppingListText());
+    status.textContent = "Shopping list copied. Paste it into your notes before you shop.";
+    button.classList.add("copied");
+  } catch {
+    status.textContent = "Clipboard access was blocked. Check your browser permissions and try again.";
+    button.classList.remove("copied");
+  }
+});
+
 projectSelect.addEventListener("change", renderFields);
 form.addEventListener("submit", event => {
   event.preventDefault();
@@ -261,11 +369,15 @@ form.addEventListener("submit", event => {
   }
   errorBox.hidden = true;
   const chosenBudget = form.elements.budget.value;
-  currentResult = estimate(projectSelect.value, inputs(), chosenBudget);
+  currentBudget = chosenBudget;
+  currentEstimateInputs = inputs();
+  currentResult = estimate(projectSelect.value, currentEstimateInputs, chosenBudget);
   renderResults(currentResult, chosenBudget);
   resultsBox.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 form.addEventListener("input", event => {
   if (event.target.matches("input[type=number]")) errorBox.hidden = true;
+  syncShoppingListButton();
 });
+form.addEventListener("change", syncShoppingListButton);
 renderFields();
